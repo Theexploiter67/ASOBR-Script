@@ -1,7 +1,8 @@
+
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-    Name = "ASOBR Hub",
+    Name = "ASOBR Hub By BSOD",
     LoadingTitle = "ASOBR Script",
     LoadingSubtitle = "Fatal_Error + DustDust + Avenge",
     ConfigurationSaving = {
@@ -120,66 +121,109 @@ TeleportsTab:CreateButton({
     end
 })
 
--- AVENGE SANS SWORD
+-- FIND ALL SWORDS (SUBSTITUI AVENGE SANS SWORD)
+local swordButtonsCreated = {}
+
 TeleportsTab:CreateButton({
-    Name = "Auto Avenge Sans Sword",
+    Name = "Find All Swords",
     Callback = function()
-        local success, err = pcall(function()
-            local character = game.Players.LocalPlayer.Character
-            if not character then return end
-
-            local hrp = character:FindFirstChild("HumanoidRootPart")
-            if not hrp then return end
-
-            local sword
+        local success, result = pcall(function()
+            local foundSwords = {}
 
             for _, obj in ipairs(workspace:GetDescendants()) do
-                if obj.Name:lower():find("avenge")
+                if obj.Name:lower():find("sword", 1, true)
                     and (obj:IsA("BasePart") or obj:IsA("Model")) then
-                    sword = obj
-                    break
+                    table.insert(foundSwords, obj)
                 end
             end
 
-            if not sword then
-                Rayfield:Notify({
-                    Title = "Error",
-                    Content = "Avenge Sword not found!",
-                    Duration = 4
-                })
-                return
+            table.sort(foundSwords, function(a, b)
+                return a:GetFullName() < b:GetFullName()
+            end)
+
+            local added = 0
+
+            for _, sword in ipairs(foundSwords) do
+                if not swordButtonsCreated[sword] then
+                    swordButtonsCreated[sword] = true
+                    added = added + 1
+
+                    local targetSword = sword
+                    local swordName = targetSword.Name
+                    local swordPath = targetSword:GetFullName()
+
+                    TeleportsTab:CreateButton({
+                        Name = "Teleport: " .. swordName,
+                        Callback = function()
+                            local player = game.Players.LocalPlayer
+                            local character = player.Character
+                            local hrp = character
+                                and character:FindFirstChild("HumanoidRootPart")
+
+                            if not hrp then
+                                Rayfield:Notify({
+                                    Title = "Sword Finder",
+                                    Content = "Character not found!",
+                                    Duration = 3
+                                })
+                                return
+                            end
+
+                            if not targetSword.Parent then
+                                Rayfield:Notify({
+                                    Title = "Sword Finder",
+                                    Content = "This sword no longer exists.",
+                                    Duration = 3
+                                })
+                                return
+                            end
+
+                            local targetCFrame
+
+                            if targetSword:IsA("BasePart") then
+                                targetCFrame = targetSword.CFrame
+                            else
+                                targetCFrame = targetSword:GetPivot()
+                            end
+
+                            hrp.CFrame = targetCFrame + Vector3.new(0, 4, 0)
+
+                            Rayfield:Notify({
+                                Title = "Sword Finder",
+                                Content = "Teleported to: " .. swordPath,
+                                Duration = 3
+                            })
+                        end
+                    })
+                end
             end
 
-            local targetCFrame = sword:IsA("BasePart")
-                and sword.CFrame or sword:GetPivot()
-
-            hrp.CFrame = targetCFrame + Vector3.new(0, 3, 0)
-
-            task.wait(0.4)
-
-            local detector =
-                sword:FindFirstChildWhichIsA("ClickDetector", true)
-
-            if detector and typeof(fireclickdetector) == "function" then
-                fireclickdetector(detector)
+            if added > 0 then
+                return "Added " .. added .. " new sword buttons!"
+            elseif #foundSwords > 0 then
+                return "Swords found, but their buttons already exist."
+            else
+                return "No swords found in the loaded area."
             end
-
-            Rayfield:Notify({
-                Title = "Avenge Sword",
-                Content = "Teleported to Avenge Sword!",
-                Duration = 3
-            })
         end)
 
+        Rayfield:Notify({
+            Title = "Find All Swords",
+            Content = success and tostring(result)
+                or ("Error: " .. tostring(result)),
+            Duration = 5
+        })
+
         if not success then
-            warn("[AVENGE SWORD] " .. tostring(err))
+            warn("[SWORD FINDER] " .. tostring(result))
         end
     end
 })
 
--- NEW: TELEPORT TO ORANGE CUBE FROM VIDEO
+-- SECRET LOCATIONS
 TeleportsTab:CreateSection("Secret Locations")
 
+-- ORANGE CUBE
 TeleportsTab:CreateButton({
     Name = "Teleport to Orange Cube",
     Callback = function()
@@ -195,8 +239,7 @@ TeleportsTab:CreateButton({
                 if obj:IsA("BasePart") and obj ~= hrp then
                     local color = obj.Color
 
-                    local isOrange =
-                        color.R > 0.65
+                    local isOrange = color.R > 0.65
                         and color.G > 0.12
                         and color.G < 0.65
                         and color.B < 0.3
@@ -205,18 +248,14 @@ TeleportsTab:CreateButton({
                     local largest = math.max(size.X, size.Y, size.Z)
                     local smallest = math.min(size.X, size.Y, size.Z)
 
-                    local isCubeLike =
-                        largest <= 15
+                    local isCubeLike = largest <= 15
                         and smallest >= 0.5
                         and largest / smallest < 2.5
 
-                    if isOrange and isCubeLike
-                        and obj.Transparency < 1 then
-
+                    if isOrange and isCubeLike and obj.Transparency < 1 then
                         table.insert(candidates, {
                             part = obj,
-                            distance =
-                                (obj.Position - hrp.Position).Magnitude
+                            distance = (obj.Position - hrp.Position).Magnitude
                         })
                     end
                 end
@@ -231,7 +270,6 @@ TeleportsTab:CreateButton({
             end)
 
             local target = candidates[1].part
-
             hrp.CFrame = target.CFrame + Vector3.new(0, 4, 0)
 
             print("[ORANGE CUBE] Target:", target:GetFullName())
@@ -277,21 +315,13 @@ CombatTab:CreateButton({
             end
 
             for _, obj in ipairs(matches) do
-                local detector =
-                    obj:FindFirstChildWhichIsA("ClickDetector", true)
+                local detector = obj:FindFirstChildWhichIsA("ClickDetector", true)
+                local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
 
-                local prompt =
-                    obj:FindFirstChildWhichIsA("ProximityPrompt", true)
-
-                if detector
-                    and typeof(fireclickdetector) == "function" then
-
+                if detector and typeof(fireclickdetector) == "function" then
                     fireclickdetector(detector)
                     return "Click attempted: " .. obj.Name
-
-                elseif prompt
-                    and typeof(fireproximityprompt) == "function" then
-
+                elseif prompt and typeof(fireproximityprompt) == "function" then
                     fireproximityprompt(prompt)
                     return "Interaction attempted: " .. obj.Name
                 end
@@ -399,9 +429,7 @@ CombatTab:CreateToggle({
                     end
 
                     if table.find(allowed_bosses, child.Name) then
-                        local humanoid =
-                            child:FindFirstChildOfClass("Humanoid")
-
+                        local humanoid = child:FindFirstChildOfClass("Humanoid")
                         if humanoid then
                             humanoid.Health = 0
                         end
@@ -450,8 +478,7 @@ CombatTab:CreateButton({
 
         for _, child in ipairs(bossFolder:GetChildren()) do
             if table.find(allowed_bosses, child.Name) then
-                local humanoid =
-                    child:FindFirstChildOfClass("Humanoid")
+                local humanoid = child:FindFirstChildOfClass("Humanoid")
 
                 if humanoid and humanoid.Health > 0 then
                     humanoid.Health = 0
@@ -517,9 +544,7 @@ PlayerTab:CreateToggle({
                     local character = player.Character
 
                     if character then
-                        local humanoid =
-                            character:FindFirstChildOfClass("Humanoid")
-
+                        local humanoid = character:FindFirstChildOfClass("Humanoid")
                         if humanoid then
                             humanoid.WalkSpeed = speedValue
                         end
@@ -541,9 +566,7 @@ PlayerTab:CreateToggle({
             local character = player.Character
 
             if character then
-                local humanoid =
-                    character:FindFirstChildOfClass("Humanoid")
-
+                local humanoid = character:FindFirstChildOfClass("Humanoid")
                 if humanoid then
                     humanoid.WalkSpeed = 16
                 end
@@ -572,9 +595,7 @@ PlayerTab:CreateSlider({
             local character = game.Players.LocalPlayer.Character
 
             if character then
-                local humanoid =
-                    character:FindFirstChildOfClass("Humanoid")
-
+                local humanoid = character:FindFirstChildOfClass("Humanoid")
                 if humanoid then
                     humanoid.WalkSpeed = Value
                 end
@@ -583,4 +604,4 @@ PlayerTab:CreateSlider({
     end
 })
 
-print("ASOBR Hub + Orange Cube Teleport + TRIDENT FINDER loaded!")
+print("ASOBR Hub + Find All Swords + Orange Cube Teleport + TRIDENT FINDER loaded!")
